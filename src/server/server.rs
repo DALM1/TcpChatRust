@@ -1,52 +1,69 @@
 use std::io::{self, BufRead, Write};
-use std::net::TcpStream;
+use std::net::TcpListener;
 
 fn main() {
-    let mut stream = TcpStream::connect("127.0.0.1:5000").unwrap();
-    let mut buffer = [0; 1024];
+    let listener = TcpListener::bind("127.0.0.1:5000").unwrap();
 
-    
-    stream.read(&mut buffer).unwrap();
-    let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
-    println!("{}", response);
+    println!("Le serveur a démarré et écoute sur le port 5000...");
 
-    print!("Entrez le mot de passe : ");
-    io::stdout().flush().unwrap();
-    let mut password = String::new();
-    io::stdin().read_line(&mut password).unwrap();
+    for stream in listener.incoming() {
+        match stream {
+            Ok(mut stream) => {
+                println!("Connexion acceptée de {}", stream.peer_addr().unwrap());
 
-    stream.write(password.trim().as_bytes()).unwrap();
-    stream.read(&mut buffer).unwrap();
-    let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
+                let mut buffer = [0; 1024];
 
-    if response == "Mot de passe incorrect" {
-        println!("{}", response);
-        return;
-    }
+                // Envoi du message de demande de mot de passe
+                let message = "Entrez le mot de passe : ";
+                stream.write(message.as_bytes()).unwrap();
 
-    print!("Entrez votre nom d'utilisateur : ");
-    io::stdout().flush().unwrap();
-    let mut username = String::new();
-    io::stdin().read_line(&mut username).unwrap();
+                // Lecture du mot de passe envoyé par le client
+                stream.read(&mut buffer).unwrap();
+                let password = String::from_utf8_lossy(&buffer[..]).trim().to_string();
 
-    stream.write(username.trim().as_bytes()).unwrap();
-    println!("\n");
+                // Vérification du mot de passe
+                if password != "my_secret_password" {
+                    let message = "Mot de passe incorrect";
+                    stream.write(message.as_bytes()).unwrap();
+                    continue;
+                }
 
-    let stdin = io::stdin();
-    loop {
-        print!("> ");
-        io::stdout().flush().unwrap();
-        let mut message = String::new();
-        stdin.lock().read_line(&mut message).unwrap();
+                // Envoi du message de demande de nom d'utilisateur
+                let message = "Entrez votre nom d'utilisateur : ";
+                stream.write(message.as_bytes()).unwrap();
 
-        stream.write(message.trim().as_bytes()).unwrap();
+                // Lecture du nom d'utilisateur envoyé par le client
+                stream.read(&mut buffer).unwrap();
+                let username = String::from_utf8_lossy(&buffer[..]).trim().to_string();
+                println!("L'utilisateur {} est connecté", username);
 
-        if message.trim().to_lowercase() == "/quit" {
-            break;
+                loop {
+                    // Envoi du message de demande de commande
+                    let message = "> ";
+                    stream.write(message.as_bytes()).unwrap();
+
+                    // Lecture de la commande envoyée par le client
+                    let mut buffer = [0; 1024];
+                    stream.read(&mut buffer).unwrap();
+                    let command = String::from_utf8_lossy(&buffer[..]).trim().to_string();
+
+                    if command.to_lowercase() == "/quit" {
+                        break;
+                    }
+
+                    // Traitement de la commande
+                    let response = match command.as_str() {
+                        "/help" => "Liste des commandes : /help, /quit",
+                        _ => "Commande inconnue",
+                    };
+
+                    // Envoi de la réponse
+                    stream.write(response.as_bytes()).unwrap();
+                }
+            }
+            Err(e) => {
+                println!("Erreur de connexion : {}", e);
+            }
         }
-
-        stream.read(&mut buffer).unwrap();
-        let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
-        println!("{}", response);
     }
 }
