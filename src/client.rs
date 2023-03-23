@@ -10,7 +10,7 @@ fn main() -> std::io::Result<()> {
     io::stdout().flush()?;
     io::stdin().read_line(&mut password)?;
 
-    stream.write_all(password.as_bytes())?;
+    stream.write_all(format!("{}\n", password.trim()).as_bytes())?;
     let mut reader = BufReader::new(&stream);
     let mut response = String::new();
     reader.read_line(&mut response)?;
