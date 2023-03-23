@@ -9,10 +9,12 @@ PASSWORD = 'my_secret_password'
 
 USERNAME = None
 
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
 sock.bind((HOST, PORT))
+
 
 sock.listen()
 
@@ -27,13 +29,13 @@ while True:
    
     password = conn.recv(1024).decode().strip()
 
-    
+   
     if password != PASSWORD:
         conn.send("Mot de passe incorrect".encode())
         conn.close()
         continue
 
-   
+    
     conn.send("Bienvenue au serveur !".encode())
 
    
@@ -43,7 +45,7 @@ while True:
     print(f"{USERNAME} a rejoint le chat.")
 
     while True:
-       
+        
         data = conn.recv(1024)
 
         if not data:
