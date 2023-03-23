@@ -5,7 +5,7 @@ fn main() {
     let mut stream = TcpStream::connect("127.0.0.1:5000").unwrap();
     let mut buffer = [0; 1024];
 
-    // Lire la réponse du serveur après la connexion
+    
     stream.read(&mut buffer).unwrap();
     let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
     println!("{}", response);
