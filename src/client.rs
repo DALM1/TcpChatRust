@@ -1,50 +1,52 @@
-use std::io::{self, prelude::*, BufReader};
+use std::io::{self, BufRead, Write};
 use std::net::TcpStream;
-use std::str;
 
-fn main() -> std::io::Result<()> {
-    let mut stream = TcpStream::connect("127.0.0.1:5000")?;
+fn main() {
+    let mut stream = TcpStream::connect("127.0.0.1:5000").unwrap();
+    let mut buffer = [0; 1024];
 
+    // Lire la réponse du serveur après la connexion
+    stream.read(&mut buffer).unwrap();
+    let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
+    println!("{}", response);
+
+    print!("Entrez le mot de passe : ");
+    io::stdout().flush().unwrap();
     let mut password = String::new();
-    print!("Entrez le mot de passe: ");
-    io::stdout().flush()?;
-    io::stdin().read_line(&mut password)?;
+    io::stdin().read_line(&mut password).unwrap();
 
-    stream.write_all(format!("{}\n", password.trim()).as_bytes())?;
-    let mut reader = BufReader::new(&stream);
-    let mut response = String::new();
-    reader.read_line(&mut response)?;
-    print!("{}", response);
+    stream.write(password.trim().as_bytes()).unwrap();
+    stream.read(&mut buffer).unwrap();
+    let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
 
-    if response.trim() == "Mot de passe incorrect" {
-        return Ok(());
+    if response == "Mot de passe incorrect" {
+        println!("{}", response);
+        return;
     }
 
+    print!("Entrez votre nom d'utilisateur : ");
+    io::stdout().flush().unwrap();
     let mut username = String::new();
-    print!("Entrez votre nom d'utilisateur: ");
-    io::stdout().flush()?;
-    io::stdin().read_line(&mut username)?;
-    stream.write_all(username.as_bytes())?;
+    io::stdin().read_line(&mut username).unwrap();
 
-    let mut reader = BufReader::new(&stream);
-    let mut response = String::new();
-    reader.read_line(&mut response)?;
-    print!("{}", response);
+    stream.write(username.trim().as_bytes()).unwrap();
+    println!("\n");
 
+    let stdin = io::stdin();
     loop {
+        print!("> ");
+        io::stdout().flush().unwrap();
         let mut message = String::new();
-        io::stdin().read_line(&mut message)?;
-        stream.write_all(message.as_bytes())?;
+        stdin.lock().read_line(&mut message).unwrap();
 
-        let mut reader = BufReader::new(&stream);
-        let mut response = String::new();
-        reader.read_line(&mut response)?;
-        print!("{}", response);
+        stream.write(message.trim().as_bytes()).unwrap();
 
-        if message.to_lowercase().trim() == "/quit" {
+        if message.trim().to_lowercase() == "/quit" {
             break;
         }
-    }
 
-    Ok(())
+        stream.read(&mut buffer).unwrap();
+        let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
+        println!("{}", response);
+    }
 }
