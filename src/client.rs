@@ -1,12 +1,11 @@
 use std::io::{self, BufRead, Write};
 use std::net::TcpStream;
-use std::thread;
 
 fn main() {
     let mut stream = TcpStream::connect("127.0.0.1:5000").unwrap();
     let mut buffer = [0; 1024];
 
-   
+    // Lire la réponse du serveur après la connexion
     stream.read(&mut buffer).unwrap();
     let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
     println!("{}", response);
@@ -17,18 +16,7 @@ fn main() {
     io::stdin().read_line(&mut password).unwrap();
 
     stream.write(password.trim().as_bytes()).unwrap();
-
-   
-    let read_stream = stream.try_clone().unwrap();
-    let read_handle = thread::spawn(move || {
-        let mut buffer = [0; 1024];
-        loop {
-            read_stream.read(&mut buffer).unwrap();
-            let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
-            println!("{}", response);
-        }
-    });
-
+    stream.read(&mut buffer).unwrap();
     let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
 
     if response == "Mot de passe incorrect" {
@@ -42,7 +30,15 @@ fn main() {
     io::stdin().read_line(&mut username).unwrap();
 
     stream.write(username.trim().as_bytes()).unwrap();
-    println!("\n");
+    stream.read(&mut buffer).unwrap();
+
+    let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
+    if response != "OK" {
+        println!("Erreur lors de l'envoi du nom d'utilisateur : {}", response);
+        return;
+    }
+
+    println!("\nBienvenue sur le chat, {} ! Tapez '/quit' pour quitter.", username.trim());
 
     let stdin = io::stdin();
     loop {
@@ -56,8 +52,9 @@ fn main() {
         if message.trim().to_lowercase() == "/quit" {
             break;
         }
-    }
 
-   
-    read_handle.join().unwrap();
+        stream.read(&mut buffer).unwrap();
+        let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
+        println!("{}", response);
+    }
 }
