@@ -20,7 +20,7 @@ def broadcast_message(sender_socket, message):
 def handle_client_connection(client_socket):
     try:
        
-        client_socket.send("Entrez le mot de passe: ".encode())
+        client_socket.send("Entrez le mot de passe: ".encode("utf-8"))
         password_input = client_socket.recv(1024).decode().strip()
 
        
@@ -30,7 +30,7 @@ def handle_client_connection(client_socket):
             return
 
       
-        client_socket.send("Entrez votre nom d'utilisateur: ".encode())
+        client_socket.send("Entrez votre nom d'utilisateur: ".encode("utf-8"))
         username = client_socket.recv(1024).decode().strip()
 
        
