@@ -19,29 +19,29 @@ def broadcast_message(sender_socket, message):
 
 def handle_client_connection(client_socket):
     try:
-        # Demander le mot de passe
+       
         client_socket.send("Entrez le mot de passe: ".encode())
         password_input = client_socket.recv(1024).decode().strip()
 
-        # Vérifier le mot de passe
+       
         if password_input != password:
             client_socket.send("Mot de passe incorrect".encode())
             client_socket.close()
             return
 
-        # Demander le nom d'utilisateur
+      
         client_socket.send("Entrez votre nom d'utilisateur: ".encode())
         username = client_socket.recv(1024).decode().strip()
 
-        # Ajouter l'utilisateur à la liste des utilisateurs
+       
         users[client_socket] = username
         clients.append(client_socket)
 
-        # Envoyer un message de bienvenue
+       
         welcome_message = f"{username} a rejoint le chat".encode()
         broadcast_message(client_socket, welcome_message)
 
-        # Attendre les messages de l'utilisateur
+       
         while True:
             message = client_socket.recv(1024)
             if message:
@@ -58,7 +58,7 @@ def handle_client_connection(client_socket):
                 break
 
     except KeyboardInterrupt:
-        # Le serveur a été arrêté
+       
         if client_socket in clients:
             clients.remove(client_socket)
         if client_socket in users:
@@ -67,7 +67,7 @@ def handle_client_connection(client_socket):
             del users[client_socket]
         client_socket.close()
     except:
-        # Une erreur s'est produite
+        
         if client_socket in clients:
             clients.remove(client_socket)
         if client_socket in users:
@@ -80,26 +80,26 @@ threads = []
 
 try:
     while True:
-        # Accepter une connexion entrante
+       
         client_socket, address = server_socket.accept()
         print(f"Connexion acceptée de {address[0]}:{address[1]}")
 
-        # Lancer un nouveau thread pour gérer la connexion
+      
         thread = threading.Thread(target=handle_client_connection, args=(client_socket,))
         threads.append(thread)
         thread.start()
 
 except KeyboardInterrupt:
-    # Le serveur a été arrêté
+   
     print("Arrêt demandé, fermeture des connexions...")
 
-    # Fermer toutes les connexions existantes
+   
     for client_socket in clients:
         client_socket.close()
 
-    # Attendre la fin de tous les threads en cours
+   
     for thread in threads:
         thread.join()
 
-    # Fermer le socket du serveur
+   
     server_socket.close()
