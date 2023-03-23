@@ -1,5 +1,5 @@
 use std::io::{self, prelude::*, BufReader};
-use std::net::{TcpStream};
+use std::net::TcpStream;
 use std::str;
 
 fn main() -> std::io::Result<()> {
@@ -8,6 +8,7 @@ fn main() -> std::io::Result<()> {
     let mut password = String::new();
     io::stdin().read_line(&mut password)?;
     write!(stream, "{}", password)?;
+    let mut stream_clone = stream.try_clone()?;
     let mut reader = BufReader::new(&stream);
     let mut buffer = String::new();
     reader.read_line(&mut buffer)?;
@@ -16,17 +17,13 @@ fn main() -> std::io::Result<()> {
         loop {
             let mut message = String::new();
             io::stdin().read_line(&mut message)?;
-            write!(stream, "{}", message)?;
+            write!(stream_clone, "{}", message)?;
             let mut buffer = [0; 1024];
             let n = reader.read(&mut buffer)?;
             if n == 0 {
-                println!("Déconnecté du serveur");
                 break;
             }
             print!("{}", str::from_utf8(&buffer[..n]).expect("Invalid UTF-8"));
-            if message.trim() == "exit" {
-                break;
-            }
         }
     } else {
         println!("Le mot de passe est incorrect!");
