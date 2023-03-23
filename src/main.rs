@@ -1,57 +1,28 @@
-use std::io::{self, Read, Write};
-use std::net::TcpStream;
-use std::thread;
+use std::io::{self, prelude::*, BufReader};
+use std::net::{TcpStream};
+use std::str;
 
-fn main() {
-    let mut stream = TcpStream::connect("127.0.0.1:5000").expect("Failed to connect to server");
-
-    println!("Connected to server!");
-
-    let mut username = String::new();
-    let mut buffer = [0; 1024];
-
-    
-    print!("Enter your username: ");
-    io::stdout().flush().unwrap();
-    io::stdin().read_line(&mut username).unwrap();
-    let username = username.trim();
-
-   
-    stream.write(username.as_bytes()).unwrap();
-
-    
-    let handle = thread::spawn(move || {
+fn main() -> std::io::Result<()> {
+    let mut stream = TcpStream::connect("127.0.0.1:8080")?;
+    println!("Entrez le mot de passe: ");
+    let mut password = String::new();
+    io::stdin().read_line(&mut password)?;
+    write!(stream, "{}", password)?;
+    let mut reader = BufReader::new(&stream);
+    let mut buffer = String::new();
+    reader.read_line(&mut buffer)?;
+    if buffer.trim() == "password accepted" {
+        println!("Le mot de passe est accepté!");
         loop {
-            let mut _buffer = [0; 1024];
-            match stream.read(&mut buffer) {
-                Ok(n) if n > 0 => {
-                    let message = String::from_utf8_lossy(&buffer[..n]);
-                    println!("{}", message);
-                }
-                Ok(_) | Err(_) => {
-                    break;
-                }
-            }
+            let mut message = String::new();
+            io::stdin().read_line(&mut message)?;
+            write!(stream, "{}", message)?;
+            let mut buffer = [0; 1024];
+            reader.read(&mut buffer)?;
+            print!("{}", str::from_utf8(&buffer).expect("Invalid UTF-8"));
         }
-    });
-
-   
-    loop {
-        let mut message = String::new();
-        print!("> ");
-        io::stdout().flush().unwrap();
-        io::stdin().read_line(&mut message).unwrap();
-        let message = message.trim();
-
-        // Quit command
-        if message == "/quit" {
-            break;
-        }
-
-        
-        stream.write(message.as_bytes()).unwrap();
+    } else {
+        println!("Le mot de passe est incorrect!");
     }
-
-    
-    handle.join().unwrap();
+    Ok(())
 }
