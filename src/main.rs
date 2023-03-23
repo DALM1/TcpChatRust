@@ -22,7 +22,7 @@ fn main() {
     
     let handle = thread::spawn(move || {
         loop {
-            let mut buffer = [0; 1024];
+            let mut _buffer = [0; 1024];
             match stream.read(&mut buffer) {
                 Ok(n) if n > 0 => {
                     let message = String::from_utf8_lossy(&buffer[..n]);
