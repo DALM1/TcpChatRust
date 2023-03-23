@@ -1,105 +1,57 @@
 import socket
-import threading
 
-host = "localhost"
-port = 5000
-password = "my_secret_password"  # définir un mot de passe
+HOST = '127.0.0.1'  # Adresse IP du serveur
+PORT = 5000  # Port à utiliser
 
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind((host, port))
-server_socket.listen()
+# Mot de passe pour se connecter au serveur
+PASSWORD = 'my_secret_password'
 
-clients = []
-users = {}
+# Nom d'utilisateur connecté
+USERNAME = None
 
-def broadcast_message(sender_socket, message):
-    for client_socket in clients:
-        if client_socket != sender_socket and client_socket in users:
-            client_socket.send(message)
+# Création d'une socket TCP/IP
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-def handle_client_connection(client_socket):
-    try:
-       
-        client_socket.send("Entrez le mot de passe: ".encode("utf-8"))
-        password_input = client_socket.recv(1024).decode().strip()
+# Association de la socket à l'adresse IP et au port
+sock.bind((HOST, PORT))
 
-       
-        if password_input != password:
-            client_socket.send("Mot de passe incorrect".encode())
-            client_socket.close()
-            return
+# Mise en écoute de la socket
+sock.listen()
 
-      
-        client_socket.send("Entrez votre nom d'utilisateur: ".encode("utf-8"))
-        username = client_socket.recv(1024).decode().strip()
+print(f"Le serveur écoute sur {HOST}:{PORT}")
 
-       
-        users[client_socket] = username
-        clients.append(client_socket)
+while True:
+    # Attente d'une connexion
+    print("En attente de connexion...")
+    conn, addr = sock.accept()
+    print(f"Connexion acceptée de {addr[0]}:{addr[1]}")
 
-       
-        welcome_message = f"{username} a rejoint le chat".encode()
-        broadcast_message(client_socket, welcome_message)
+    # Lecture du mot de passe envoyé par le client
+    password = conn.recv(1024).decode().strip()
 
-       
-        while True:
-            message = client_socket.recv(1024)
-            if message:
-                broadcast_message(client_socket, f"{username}: {message}".encode())
-            else:
-                # L'utilisateur a quitté le chat
-                if client_socket in clients:
-                    clients.remove(client_socket)
-                if client_socket in users:
-                    username = users[client_socket]
-                    broadcast_message(client_socket, f"{username} a quitté le chat".encode())
-                    del users[client_socket]
-                client_socket.close()
-                break
+    # Vérification du mot de passe
+    if password != PASSWORD:
+        conn.send("Mot de passe incorrect".encode())
+        conn.close()
+        continue
 
-    except KeyboardInterrupt:
-       
-        if client_socket in clients:
-            clients.remove(client_socket)
-        if client_socket in users:
-            username = users[client_socket]
-            broadcast_message(client_socket, f"{username} a quitté le chat".encode())
-            del users[client_socket]
-        client_socket.close()
-    except:
-        
-        if client_socket in clients:
-            clients.remove(client_socket)
-        if client_socket in users:
-            username = users[client_socket]
-            broadcast_message(client_socket, f"{username} a quitté le chat".encode())
-            del users[client_socket]
-        client_socket.close()
+    # Envoi d'un message de bienvenue
+    conn.send("Bienvenue au serveur !".encode())
 
-threads = []
+    # Lecture du nom d'utilisateur envoyé par le client
+    username = conn.recv(1024).decode().strip()
+    USERNAME = username
 
-try:
+    print(f"{USERNAME} a rejoint le chat.")
+
     while True:
        
-        client_socket, address = server_socket.accept()
-        print(f"Connexion acceptée de {address[0]}:{address[1]}")
+        data = conn.recv(1024)
 
-      
-        thread = threading.Thread(target=handle_client_connection, args=(client_socket,))
-        threads.append(thread)
-        thread.start()
+        if not data:
+            break
 
-except KeyboardInterrupt:
-   
-    print("Arrêt demandé, fermeture des connexions...")
+        message = data.decode().strip()
 
-   
-    for client_socket in clients:
-        client_socket.close()
-
-   
-    for thread in threads:
-        thread.join()
-
-   
-    server_socket.close()
+        if message == "/quit":
+           
