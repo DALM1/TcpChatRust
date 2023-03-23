@@ -10,16 +10,16 @@ fn main() {
     let mut username = String::new();
     let mut buffer = [0; 1024];
 
-    // Prompt user for username
+    
     print!("Enter your username: ");
     io::stdout().flush().unwrap();
     io::stdin().read_line(&mut username).unwrap();
     let username = username.trim();
 
-    // Send username to server
+   
     stream.write(username.as_bytes()).unwrap();
 
-    // Spawn a thread to handle incoming messages
+    
     let handle = thread::spawn(move || {
         loop {
             let mut buffer = [0; 1024];
@@ -35,7 +35,7 @@ fn main() {
         }
     });
 
-    // Main loop for sending messages
+   
     loop {
         let mut message = String::new();
         print!("> ");
@@ -48,10 +48,10 @@ fn main() {
             break;
         }
 
-        // Send message to server
+        
         stream.write(message.as_bytes()).unwrap();
     }
 
-    // Wait for the incoming message thread to exit
+    
     handle.join().unwrap();
 }
