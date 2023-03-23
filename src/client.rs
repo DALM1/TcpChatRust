@@ -1,5 +1,6 @@
 use std::io::{self, BufRead, Write};
 use std::net::TcpStream;
+use std::thread;
 
 fn main() {
     let mut stream = TcpStream::connect("127.0.0.1:5000").unwrap();
@@ -16,7 +17,18 @@ fn main() {
     io::stdin().read_line(&mut password).unwrap();
 
     stream.write(password.trim().as_bytes()).unwrap();
-    stream.read(&mut buffer).unwrap();
+
+    // Utiliser un thread pour lire les réponses du serveur
+    let read_stream = stream.try_clone().unwrap();
+    let read_handle = thread::spawn(move || {
+        let mut buffer = [0; 1024];
+        loop {
+            read_stream.read(&mut buffer).unwrap();
+            let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
+            println!("{}", response);
+        }
+    });
+
     let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
 
     if response == "Mot de passe incorrect" {
@@ -44,9 +56,8 @@ fn main() {
         if message.trim().to_lowercase() == "/quit" {
             break;
         }
-
-        stream.read(&mut buffer).unwrap();
-        let response = String::from_utf8_lossy(&buffer[..]).trim().to_string();
-        println!("{}", response);
     }
+
+    // Attendre que le thread de lecture se termine avant de fermer la connexion
+    read_handle.join().unwrap();
 }
