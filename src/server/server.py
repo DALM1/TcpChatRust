@@ -1,57 +1,96 @@
 import socket
+import threading
 
-HOST = '127.0.0.1'  # Adresse IP du serveur
-PORT = 5000  # Port à utiliser
+host = "localhost"
+port = 5000
+password = "my_secret_password"  # définir un mot de passe
 
-# Mot de passe pour se connecter au serveur
-PASSWORD = 'my_secret_password'
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind((host, port))
+server_socket.listen()
 
+clients = []
+users = {}
 
-USERNAME = None
+def broadcast_message(sender_socket, message):
+    for client_socket in clients:
+        if client_socket != sender_socket and client_socket in users:
+            client_socket.send(message)
 
+def handle_client_connection(client_socket):
+    try:
+       
+        client_socket.send("Entrez le mot de passe: ".encode())
+        password = client_socket.recv(1024).decode()
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+       
+        if password != password:
+            client_socket.send("Mot de passe incorrect".encode())
+            client_socket.close()
+            return
 
+       
+        client_socket.send("Entrez votre nom d'utilisateur: ".encode())
+        username = client_socket.recv(1024).decode()
 
-sock.bind((HOST, PORT))
+        users[client_socket] = username
+        clients.append(client_socket)
 
+        welcome_message = f"{username} a rejoint le chat".encode()
+        broadcast_message(client_socket, welcome_message)
 
-sock.listen()
+        while True:
+            message = client_socket.recv(1024)
+            if message:
+                broadcast_message(client_socket, f"{username}: {message}".encode())
+            else:
+                if client_socket in clients:
+                    clients.remove(client_socket)
+                if client_socket in users:
+                    username = users[client_socket]
+                    broadcast_message(client_socket, f"{username} a quitté le chat".encode())
+                    del users[client_socket]
+                client_socket.close()
+                break
+    except KeyboardInterrupt:
+        
+        if client_socket in clients:
+            clients.remove(client_socket)
+        if client_socket in users:
+            username = users[client_socket]
+            broadcast_message(client_socket, f"{username} a quitté le chat".encode())
+            del users[client_socket]
+        client_socket.close()
+    except:
+        
+        if client_socket in clients:
+            clients.remove(client_socket)
+        if client_socket in users:
+            username = users[client_socket]
+            broadcast_message(client_socket, f"{username} a quitté le chat".encode())
+            del users[client_socket]
+        client_socket.close()
 
-print(f"Le serveur écoute sur {HOST}:{PORT}")
+threads = []
 
-while True:
-   
-    print("En attente de connexion...")
-    conn, addr = sock.accept()
-    print(f"Connexion acceptée de {addr[0]}:{addr[1]}")
+try:
+    while True:
+        client_socket, address = server_socket.accept()
+        print(f"Connexion acceptée de {address[0]}:{address[1]}")
+        thread = threading.Thread(target=handle_client_connection, args=(client_socket,))
+        threads.append(thread)
+        thread.start()
 
-   
-    password = conn.recv(1024).decode().strip()
-
-   
-    if password != PASSWORD:
-        conn.send("Mot de passe incorrect".encode())
-        conn.close()
-        continue
+except KeyboardInterrupt:
+    print("Arrêt demandé, fermeture des connexions...")
 
     
-    conn.send("Bienvenue au serveur !".encode())
+    for client_socket in clients:
+        client_socket.close()
 
-   
-    username = conn.recv(1024).decode().strip()
-    USERNAME = username
+    
+    for thread in threads:
+        thread.join()
 
-    print(f"{USERNAME} a rejoint le chat.")
-
-    while True:
-        
-        data = conn.recv(1024)
-
-        if not data:
-            break
-
-        message = data.decode().strip()
-
-        if message == "/quit":
-           
+    
+    server_socket.close()
